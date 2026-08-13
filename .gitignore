@@ -1,0 +1,33 @@
+# Binary e eseguibili
+/ccjq
+*.exe
+*.out
+*.app
+
+# File oggetto e librerie
+*.o
+*.a
+*.so
+*.dylib
+
+# File e cartelle temporanee del compilatore e gdb/lldb
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# VS Code / Editor settings
+.vscode/
+.idea/
+*.swp
+*~
+
+# File di sistema macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Log e file di output temporanei dei test
+*.log
+tmp/
