@@ -33,10 +33,3 @@ void json_value_free(JsonValue* val) {
 
     free(val);  // Libera la struct JsonValue stessa
 }
-
-JsonArray init_array(int capacity) {
-    JsonArray arr;
-    arr.capacity = capacity;
-    arr.count = 0;
-    return arr;
-}

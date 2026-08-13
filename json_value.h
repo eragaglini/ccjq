@@ -47,6 +47,3 @@ struct JsonValue {
 };
 
 void json_value_free(JsonValue *val);
-JsonArray init_array(int capacity);
-JsonArray init_array(int capacity);
-json_value_error_t add_element(JsonValue* val, JsonArray* arr);
