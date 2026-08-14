@@ -3,11 +3,12 @@
 #include <stdio.h>
 
 #include "json_object.h"
+#include "json_value.h"
 
-// Helper privato per stampare N spazi di indentazione
+// Helper privato per stampare N spazi di indentazione (2 spazi per livello)
 static void print_indent(FILE* stream, int level) {
     for (int i = 0; i < level; i++) {
-        fprintf(stream, "  ");  // 2 spazi per ogni livello
+        fprintf(stream, "  ");
     }
 }
 
@@ -27,7 +28,7 @@ void json_value_print(FILE* stream, const JsonValue* val, int indent_level) {
             break;
 
         case JSON_NUMBER:
-            // %g rimuove gli zeri decimali superflui
+            // %g rimuove zeri superflui (es. 10 al posto di 10.000000)
             fprintf(stream, "%g", val->value.number);
             break;
 
@@ -58,27 +59,26 @@ void json_value_print(FILE* stream, const JsonValue* val, int indent_level) {
         }
 
         case JSON_OBJECT: {
-            JsonObject* obj = val->value.object;
-            size_t count = json_object_get_count(obj);  // Aggiungi getter per il conteggio chiavi
-
-            if (count == 0) {
+            const JsonObject* obj = val->value.object;
+            if (!obj || obj->count == 0 || obj->head_order == NULL) {
                 fprintf(stream, "{}");
                 break;
             }
 
             fprintf(stream, "{\n");
-            for (size_t i = 0; i < count; i++) {
-                const char* key = json_object_get_key_at(obj, i);  // Helper per iterare le chiavi
-                JsonValue* child = json_object_get_value_at(obj, i);
-
+            const JsonPair* curr = obj->head_order; // Inizio della sequenza cronologica
+            while (curr != NULL) {
                 print_indent(stream, indent_level + 1);
-                fprintf(stream, "\"%s\": ", key);
-                json_value_print(stream, child, indent_level + 1);
+                fprintf(stream, "\"%s\": ", curr->key);
+                json_value_print(stream, curr->val, indent_level + 1);
 
-                if (i < count - 1) {
+                // Mette la virgola solo se c'è un elemento successivo
+                if (curr->next_order != NULL) {
                     fprintf(stream, ",");
                 }
                 fprintf(stream, "\n");
+
+                curr = curr->next_order; // Avanza al prossimo nodo inserito
             }
             print_indent(stream, indent_level);
             fprintf(stream, "}");

@@ -94,7 +94,7 @@ json_parser_error_t parse_and_add_key(Tokenizer* tokenizer, JsonObject* obj, con
         return JSONPARSER_ERROR_NOMEM;
     }
 
-    if (json_object_put(obj, key, value) == JSONOBJECT_ERROR_NOMEM) {
+    if (json_object_set(obj, key, value) == JSONOBJECT_ERROR_NOMEM) {
         json_value_free(value);  // Ricordati di liberare value se la put fallisce!
         json_object_free(obj);
         return JSONPARSER_ERROR_NOMEM;

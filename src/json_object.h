@@ -1,31 +1,81 @@
-#pragma once
+#ifndef JSON_OBJECT_H
+#define JSON_OBJECT_H
 
-#include <stddef.h> // size_t
+#include <stdbool.h>
+#include <stddef.h>
 
-// Forward declarations
+// Forward declaration per evitare dipendenze circolari
 typedef struct JsonValue JsonValue;
+typedef struct JsonPair JsonPair;
 typedef struct JsonObject JsonObject;
 
-/// @brief Error codes for library "json_object"
-typedef enum json_object_error {
+// Codici di errore per le operazioni sull'oggetto
+typedef enum {
     JSONOBJECT_ERROR_OK = 0,
     JSONOBJECT_ERROR_NOMEM,
-    JSONOBJECT_ERROR_DATA,
-    JSONOBJECT_ERROR_COUNT,
+    JSONOBJECT_ERROR_DATA
 } json_object_error_t;
 
-JsonObject*         json_object_create(void);
-json_object_error_t json_object_put(JsonObject* obj, const char* key, JsonValue* value);
-JsonValue*          json_object_get(JsonObject* obj, const char* key);
-void                json_object_free(JsonObject* obj);
+/*
+ * ==============================================================================
+ * Struttura del singolo elemento (Coppia Chiave-Valore)
+ * ==============================================================================
+ *
+ *              +-------------------------+
+ *              |        JsonPair         |
+ *              +-------------------------+
+ *              | key: "nome"             |
+ *              | val: (JsonValue*)       |
+ *              +-------------------------+
+ *              | next_hash  -----------> | (Punta al prossimo nodo con lo stesso hash)
+ *              | next_order -----------> | (Punta alla chiave inserita cronologicamente DOPO)
+ *              | prev_order -----------> | (Punta alla chiave inserita cronologicamente PRIMA)
+ *              +-------------------------+
+ */
+struct JsonPair {
+    char* key;
+    JsonValue* val;
+    JsonPair* next_hash;   // Catena per le collisioni nel bucket dell'Hash Table
+    JsonPair* next_order;  // Ordine cronologico: elemento successivo
+    JsonPair* prev_order;  // Ordine cronologico: elemento precedente
+};
 
-// --- Funzioni per l'iterazione su JsonObject ---
+/*
+ * ==============================================================================
+ * Struttura principale della Hash Table Ordinata
+ * ==============================================================================
+ *
+ *  JsonObject
+ *  +-----------------------+
+ *  | count: 2              |
+ *  | capacity: 4           |
+ *  | head_order --------+  |
+ *  | tail_order -----+  |  |
+ *  | pairs           |  |  |
+ *  +---|-------------|--|--+
+ *      |             |  |
+ *      v             |  |
+ *    [0] -> NULL     |  |
+ *    [1] -> [Pair A]-+  |   (Pair A inserito per primo)
+ *            |          |
+ *            | (next_order)
+ *            v          |
+ *    [2] -> [Pair B]<---+   (Pair B inserito per secondo)
+ *    [3] -> NULL
+ */
+struct JsonObject {
+    JsonPair** pairs;       // Array dinamico di puntatori ai bucket (JsonPair*)
+    size_t count;           // Numero di coppie chiave-valore presenti
+    size_t capacity;        // Numero totale di bucket allocati
 
-/// Restituisce il numero di coppie chiave-valore presenti nell'oggetto
-size_t              json_object_get_count(const JsonObject* obj);
+    JsonPair* head_order;   // Primo elemento inserito (testa per la stampa ordinata)
+    JsonPair* tail_order;   // Ultimo elemento inserito (coda per append rapido)
+};
 
-/// Restituisce la chiave all'indice specificato (oppure NULL se fuori dai limiti)
-const char*         json_object_get_key_at(const JsonObject* obj, size_t index);
+// Funzioni pubbliche
+JsonObject* json_object_create(void);
+void json_object_free(JsonObject* obj);
+JsonValue* json_object_get(const JsonObject* obj, const char* key);
+json_object_error_t json_object_set(JsonObject* obj, const char* key, JsonValue* value);
 
-/// Restituisce il valore all'indice specificato (oppure NULL se fuori dai limiti)
-JsonValue*          json_object_get_value_at(const JsonObject* obj, size_t index);
+#endif // JSON_OBJECT_H
