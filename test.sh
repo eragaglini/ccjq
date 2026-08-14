@@ -7,8 +7,8 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 # Nome del tuo eseguibile (modificalo se il tuo binario si chiama diversamente)
-EXECUTABLE="./ccjq"
-TESTS_DIR="tests"
+EXECUTABLE="./bin/ccjq"
+TESTS_DIR="integration_tests"
 
 # Verifichiamo che l'eseguibile esista
 if [ ! -f "$EXECUTABLE" ]; then
@@ -24,7 +24,7 @@ echo -e "${BOLD}       SUITE DI TEST JSON PARSER          ${NC}"
 echo "=========================================="
 
 # Scorriamo tutte le cartelle step1, step2, step3, step4
-for step_dir in $(ls -d ${TESTS_DIR}/step* 2>/dev/null | sort); do
+for step_dir in "$TESTS_DIR"/step*/; do
     step_name=$(basename "$step_dir")
     echo ""
     echo -e "${BOLD}--- Testing $step_name ---${NC}"

@@ -1,5 +1,8 @@
-# Binary e eseguibili
-/ccjq
+# Cartelle di output compilazione
+/bin/
+/build/
+
+# Binary e eseguibili isolati
 *.exe
 *.out
 *.app
@@ -10,13 +13,13 @@
 *.so
 *.dylib
 
-# File e cartelle temporanee del compilatore e gdb/lldb
+# Debug symbol folders (macOS lldb / gdb)
 *.dSYM/
 *.su
 *.idb
 *.pdb
 
-# VS Code / Editor settings
+# Editor & IDE
 .vscode/
 .idea/
 *.swp
@@ -28,6 +31,6 @@
 .LSOverride
 ._*
 
-# Log e file di output temporanei dei test
+# Log e temporanei
 *.log
 tmp/
