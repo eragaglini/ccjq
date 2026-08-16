@@ -2,19 +2,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "filter_parser.h"
+#include "filter.h"
+#include "filter_engine.h"
 #include "parser.h"
 #include "print.h"
 #include "tokenizer.h"
 
 int main(int argc, char* argv[]) {
+    const char* filter_str = ".";  // Default per argc == 1
     FILE* input_stream = stdin;
 
-    if (argc > 1) {
-        input_stream = fopen(argv[1], "r");
+    if (argc == 2) {
+        filter_str = argv[1];
+    } else if (argc == 3) {
+        filter_str = argv[1];
+        input_stream = fopen(argv[2], "r");
         if (input_stream == NULL) {
             perror("Errore nell'apertura del file");
             return EXIT_FAILURE;
         }
+    } else if (argc > 3) {
+        fprintf(stderr, "Uso: %s [filtro] [file.json]\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     // Controllo stream vuoto (funziona sia per file che per stdin)
@@ -28,23 +38,40 @@ int main(int argc, char* argv[]) {
     }
     ungetc(c, input_stream);
 
-    // 1. Eseguiamo il parsing
-    JsonValue* jv = parse_json(input_stream);
+    // 1. Parsing del JSON
+    JsonValue* root = parse_json(input_stream);
 
-    // 2. Pulizia del file
     if (input_stream != stdin) {
         fclose(input_stream);
     }
 
-    // 3. Gestione dell'esito finale
-    if (jv == NULL) {
+    if (root == NULL) {
         fprintf(stderr, "JSON non valido!\n");
         return EXIT_FAILURE;
     }
 
-    json_value_dump(jv);
+    // 2. Valutazione del filtro
+    Filter* filter = compile_filter(filter_str);
+    if (filter == NULL) {
+        // Se il filtro è sintatticamente errato
+        json_value_free(root);
+        return EXIT_FAILURE;
+    }
 
-    json_value_free(jv);
+    JsonValue* result = run_filter(root, filter);
+
+    // 3. Stampa del risultato
+    json_value_dump(result);
+
+    // 4. Liberazione dell'albero originale
+    json_value_free(root);
+
+    // 5. Liberazione della struttura filter
+    filter_free(filter);
+
+
+    // 6. Liberazione del risultato
+    json_value_free(result);
 
     return EXIT_SUCCESS;
 }

@@ -36,7 +36,7 @@ for step_dir in "$TESTS_DIR"/step*/; do
         filename=$(basename "$test_file")
 
         # Eseguiamo il parser sul file nascondendo l'output di stdout e stderr
-        "$EXECUTABLE" "$test_file" > /dev/null 2>&1
+        "$EXECUTABLE" "." "$test_file" > /dev/null 2>&1
         exit_code=$?
 
         # Valutazione del risultato in base al nome del file
