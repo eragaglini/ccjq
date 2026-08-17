@@ -1,10 +1,25 @@
 #include "filter_tokenizer.h"
 
 #include <ctype.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Funzione helper per leggere il prossimo carattere dal file
+// Table look-up per classificazione rapida O(1) dei caratteri
+static const unsigned char type[UCHAR_MAX + 1u] = {
+    ['A'] = 1, ['B'] = 1, ['C'] = 1, ['D'] = 1, ['E'] = 1, ['F'] = 1, ['G'] = 1, ['H'] = 1,
+    ['I'] = 1, ['J'] = 1, ['K'] = 1, ['L'] = 1, ['M'] = 1, ['N'] = 1, ['O'] = 1, ['P'] = 1,
+    ['Q'] = 1, ['R'] = 1, ['S'] = 1, ['T'] = 1, ['U'] = 1, ['V'] = 1, ['W'] = 1, ['X'] = 1,
+    ['Y'] = 1, ['Z'] = 1, ['a'] = 1, ['b'] = 1, ['c'] = 1, ['d'] = 1, ['e'] = 1, ['f'] = 1,
+    ['g'] = 1, ['h'] = 1, ['i'] = 1, ['j'] = 1, ['k'] = 1, ['l'] = 1, ['m'] = 1, ['n'] = 1,
+    ['o'] = 1, ['p'] = 1, ['q'] = 1, ['r'] = 1, ['s'] = 1, ['t'] = 1, ['u'] = 1, ['v'] = 1,
+    ['w'] = 1, ['x'] = 1, ['y'] = 1, ['z'] = 1,
+    ['_'] = 1,  // Supporto per identificatori snake_case
+    ['"'] = 1, ['['] = 2, [']'] = 3, ['.'] = 4, ['|'] = 5, ['0'] = 6, ['1'] = 6, ['2'] = 6,
+    ['3'] = 6, ['4'] = 6, ['5'] = 6, ['6'] = 6, ['7'] = 6, ['8'] = 6, ['9'] = 6, ['\0'] = 7};
+
 static void advance_filter_tokenizer(FilterTokenizer* tokenizer) { tokenizer->cursor++; }
 
 static char get_current_char(FilterTokenizer* tokenizer) {
@@ -14,18 +29,14 @@ static char get_current_char(FilterTokenizer* tokenizer) {
 static void skip_whitespace(FilterTokenizer* tokenizer) {
     char current = get_current_char(tokenizer);
     while (current == ' ' || current == '\t' || current == '\n' || current == '\r') {
-        advance_filter_tokenizer(tokenizer);  // Avanza finché trova spazi
+        advance_filter_tokenizer(tokenizer);
         current = get_current_char(tokenizer);
     }
 }
 
 void init_filter_tokenizer(FilterTokenizer* tokenizer, const char* filter_str) {
     tokenizer->filter_str = filter_str;
-    // a differenza del tokenizer per il JSON, dove potevamo fare fgetc, qui il cursore è
-    // l'indice della filter string del tokenizer, pertanto lo inizializziamo a 0 qui e lo
-    // avanzeremo solo successivamente
     tokenizer->cursor = 0;
-    // advance_filter_tokenizer(tokenizer);
 }
 
 static FilterToken read_index(FilterTokenizer* tokenizer) {
@@ -34,7 +45,6 @@ static FilterToken read_index(FilterTokenizer* tokenizer) {
     size_t len = 0;
     char current = get_current_char(tokenizer);
 
-// Helper locale per avanzare e contemporaneamente salvare nel buffer
 #define CONSUME()                                                                  \
     do {                                                                           \
         if (len < sizeof(buf) - 1) buf[len++] = (char)get_current_char(tokenizer); \
@@ -42,17 +52,16 @@ static FilterToken read_index(FilterTokenizer* tokenizer) {
         current = get_current_char(tokenizer);                                     \
     } while (0)
 
-    // 1. Gestione segno o zero iniziale
     if (current == '0') {
         CONSUME();
-        if (isdigit(current)) {
-            fprintf(stderr, "Lo zero non può essere seguito da un numero!\n");
+        if (isdigit((unsigned char)current)) {
+            fprintf(stderr, "Errore: lo zero non può essere seguito da un numero!\n");
             token.type = FILTER_TOKEN_ERROR;
             token.value = NULL;
             return token;
         }
     } else {
-        while (isdigit(current)) {
+        while (isdigit((unsigned char)current)) {
             CONSUME();
         }
     }
@@ -61,74 +70,66 @@ static FilterToken read_index(FilterTokenizer* tokenizer) {
 
     buf[len] = '\0';
     token.type = FILTER_TOKEN_NUMBER;
-    token.value = strdup(buf);  // Salva il testo dell'indice (es. "0", "1", "2")
+    token.value = strdup(buf);
     return token;
 }
 
 FilterToken next_filter_token(FilterTokenizer* tokenizer) {
-    // 1. Ignora gli spazi vuoti accumulati prima del token
     skip_whitespace(tokenizer);
 
     FilterToken token;
-    token.value = NULL;  // Default
+    token.value = NULL;
     char current = get_current_char(tokenizer);
 
-    // 2. Gestione Fine File (EOF)
-    if (current == EOF) {
-        token.type = FILTER_TOKEN_EOF;
-        return token;
-    }
-
-    // 3. Riconosci il token in base al carattere attuale
-    switch (current) {
-        case '[':
+    switch (type[(unsigned char)current]) {
+        case 2:
             token.type = FILTER_TOKEN_LEFT_BRACKET;
-            advance_filter_tokenizer(tokenizer);  // MANGIA il carattere '[' per preparare il
-                                                  // cursor al prossimo giro
+            advance_filter_tokenizer(tokenizer);
             return token;
 
-        case ']':
+        case 3:
             token.type = FILTER_TOKEN_RIGHT_BRACKET;
-            advance_filter_tokenizer(tokenizer);  // MANGIA il carattere ']'
+            advance_filter_tokenizer(tokenizer);
             return token;
 
-        case '.':
+        case 4:
             token.type = FILTER_TOKEN_DOT;
-            advance_filter_tokenizer(tokenizer);  // MANGIA il carattere '.'
+            advance_filter_tokenizer(tokenizer);
             return token;
 
-        case '|':
+        case 5:
             token.type = FILTER_TOKEN_PIPE;
-            advance_filter_tokenizer(tokenizer);  // MANGIA il carattere '|'
+            advance_filter_tokenizer(tokenizer);
             return token;
 
-        case '"': {
-            advance_filter_tokenizer(tokenizer);  // Saltiamo la virgoletta iniziale
+        case 1: {
+            bool is_quoted_str = (current == '"');
+            if (is_quoted_str) {
+                advance_filter_tokenizer(tokenizer);
+            }
 
-            size_t capacity = 128;  // Capacità iniziale piccola per non sprecare RAM
+            size_t capacity = 128;
             size_t len = 0;
             char* buf = (char*)malloc(capacity);
             if (!buf) {
-                fprintf(stderr, "Attenzione! Memoria insufficiente!\n");
+                fprintf(stderr, "Errore: memoria insufficiente!\n");
                 token.type = FILTER_TOKEN_ERROR;
                 token.value = NULL;
                 return token;
             }
-            // advance_filter_tokenizer(tokenizer);
-            // prendiamo il primo vero carattere, es.: 'n' in 'name'
+
             current = get_current_char(tokenizer);
-            while (current != '"') {
-                // se la virgoletta non viene chiusa, dobbiamo ritornare un errore
-                if (current == '\0' || (unsigned char)current < 32) {
+            while (((isalnum((unsigned char)current) || current == '_') && !is_quoted_str) ||
+                   (current != '"' && is_quoted_str)) {
+                if (is_quoted_str && (current == '\0' || (unsigned char)current < 32)) {
                     free(buf);
-                    fprintf(stderr, "Attenzione! '\"' non è mai stata chiusa!\n");
+                    fprintf(stderr, "Errore: virgoletta '\"' non chiusa!\n");
                     token.type = FILTER_TOKEN_ERROR;
                     token.value = NULL;
                     return token;
                 }
 
-                // Gestione escape '\'
-                if (current == '\\') {
+                if (is_quoted_str && current == '\\') {
                     advance_filter_tokenizer(tokenizer);
                     current = get_current_char(tokenizer);
                     switch (current) {
@@ -164,13 +165,10 @@ FilterToken next_filter_token(FilterTokenizer* tokenizer) {
                     }
                 }
 
-                // Se il buffer è pieno (considerando anche il '\0' finale), raddoppiamo la
-                // capacità!
                 if (len + 1 >= capacity) {
                     size_t new_cap = capacity * 2;
                     char* new_buf = (char*)realloc(buf, new_cap);
                     if (!new_buf) {
-                        fprintf(stderr, "Attenzione! Memoria insufficiente!\n");
                         free(buf);
                         token.type = FILTER_TOKEN_ERROR;
                         token.value = NULL;
@@ -179,40 +177,31 @@ FilterToken next_filter_token(FilterTokenizer* tokenizer) {
                     buf = new_buf;
                     capacity = new_cap;
                 }
-                // andiamo a scrivere all'indice len il carattere corrente
+
                 buf[len++] = current;
-                // avanza, es.: 'a' in 'name'
                 advance_filter_tokenizer(tokenizer);
                 current = get_current_char(tokenizer);
             }
 
-            advance_filter_tokenizer(tokenizer);  // Saltiamo la virgoletta di chiusura '"'
+            if (is_quoted_str) {
+                advance_filter_tokenizer(tokenizer);
+            }
 
-            buf[len] = '\0';  // Terminatore di stringa
+            buf[len] = '\0';
             token.type = FILTER_TOKEN_STRING;
-            token.value =
-                buf;  // Passiamo direttamente il buffer allocato (senza bisogno di strdup!)
+            token.value = buf;
             return token;
         }
 
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
+        case 6:
             return read_index(tokenizer);
 
-        case '\0':
+        case 7:
             token.type = FILTER_TOKEN_EOF;
             return token;
 
         default:
-            fprintf(stderr, "Carattere %c non riconosciuto!\n", current);
+            fprintf(stderr, "Carattere '%c' non riconosciuto!\n", current);
             token.type = FILTER_TOKEN_ERROR;
             advance_filter_tokenizer(tokenizer);
             return token;
@@ -223,6 +212,5 @@ char filter_tokenizer_peek(const FilterTokenizer* tokenizer) {
     if (tokenizer->filter_str == NULL) {
         return '\0';
     }
-    // Legge il carattere corrente senza toccare il cursore
     return tokenizer->filter_str[tokenizer->cursor];
 }

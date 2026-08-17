@@ -75,7 +75,7 @@ void test_filter_simple_key() {
     ASSERT(root != NULL, "Root should not be NULL");
 
     // Test estrazione stringa con .name
-    Filter* name_filter = filter_compile(".\"name\"");
+    Filter* name_filter = filter_compile(".name");
     // usamo ->next per il check perché il primo filtro è sempre il filtro identità , che in fase
     // di esecuzione sarà eventualmente saltato
     ASSERT(name_filter->next->type == FILTER_FIELD, "Name filter should be field!!\n");
