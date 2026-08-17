@@ -142,8 +142,8 @@ int main() {
     test_simple_json();
     test_filter_identity();
     test_filter_simple_key();
-    // test_filter_missing_key();
-    // test_filter_invalid_syntax();
+    test_filter_missing_key();
+    test_filter_invalid_syntax();
 
     printf("==========================================\n");
     printf("All unit tests passed successfully! 🎉\n");
