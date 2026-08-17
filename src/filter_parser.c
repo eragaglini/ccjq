@@ -6,8 +6,8 @@
 #include "filter.h"
 #include "filter_tokenizer.h"
 
-static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer* tokenizer_ptr) {
-    FilterToken token = next_filter_token(tokenizer_ptr);
+static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer* tokenizer) {
+    FilterToken token = next_filter_token(tokenizer);
     Filter* next_step = NULL;
 
     switch (token.type) {
@@ -19,11 +19,11 @@ static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer*
             break;
 
         case FILTER_TOKEN_LEFT_BRACKET:
-            token = next_filter_token(tokenizer_ptr);
+            token = next_filter_token(tokenizer);
             if (token.type == FILTER_TOKEN_STRING) {
                 next_step = (Filter*)calloc(1, sizeof(Filter));
                 next_step->type = FILTER_FIELD;
-                next_step->key = token.value; // Corretto qui
+                next_step->key = token.value;  // Corretto qui
                 filter->next = next_step;
             } else if (token.type == FILTER_TOKEN_NUMBER) {
                 next_step = (Filter*)calloc(1, sizeof(Filter));
@@ -32,12 +32,13 @@ static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer*
                 next_step->index = strtoul(token.value, &endptr, 10);
                 filter->next = next_step;
             } else {
-                fprintf(stderr, "Errore di sintassi: attesa stringa o indice numerico dentro '[]'\n");
+                fprintf(stderr,
+                        "Errore di sintassi: attesa stringa o indice numerico dentro '[]'\n");
                 return FILTER_PARSER_ERROR_SYNTAX;
             }
 
             // Consumiamo la parentesi chiusa ']'
-            token = next_filter_token(tokenizer_ptr);
+            token = next_filter_token(tokenizer);
             if (token.type != FILTER_TOKEN_RIGHT_BRACKET) {
                 fprintf(stderr, "Errore di sintassi: atteso ']' di chiusura\n");
                 return FILTER_PARSER_ERROR_SYNTAX;
@@ -45,7 +46,8 @@ static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer*
             break;
 
         case FILTER_TOKEN_EOF:
-            fprintf(stderr, "Errore di sintassi: necessario specificare chiave o indice dopo il punto\n");
+            fprintf(stderr,
+                    "Errore di sintassi: necessario specificare chiave o indice dopo il punto\n");
             return FILTER_PARSER_ERROR_SYNTAX;
 
         default:
@@ -54,13 +56,13 @@ static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer*
     }
 
     // Processa gli step successivi (. o |)
-    token = next_filter_token(tokenizer_ptr);
+    token = next_filter_token(tokenizer);
     if (token.type == FILTER_TOKEN_DOT) {
-        return compile_dot_filter(next_step, tokenizer_ptr);
+        return compile_dot_filter(next_step, tokenizer);
     } else if (token.type == FILTER_TOKEN_PIPE) {
-        token = next_filter_token(tokenizer_ptr);
+        token = next_filter_token(tokenizer);
         if (token.type == FILTER_TOKEN_DOT) {
-            return compile_dot_filter(next_step, tokenizer_ptr);
+            return compile_dot_filter(next_step, tokenizer);
         }
         fprintf(stderr, "Errore di sintassi: atteso '.' dopo il pipe '|'\n");
         return FILTER_PARSER_ERROR_SYNTAX;
@@ -72,7 +74,7 @@ static filter_parser_error_t compile_dot_filter(Filter* filter, FilterTokenizer*
     return FILTER_PARSER_ERROR_OK;
 }
 
-Filter* compile_filter(const char* filter_str) {
+Filter* filter_compile(const char* filter_str) {
     if (filter_str == NULL || *filter_str == '\0') {
         return NULL;
     }

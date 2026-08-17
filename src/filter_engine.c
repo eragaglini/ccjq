@@ -5,34 +5,34 @@
 #include "filter.h"
 #include "json_object.h"
 
-static JsonValue* run_filter_field(JsonValue* jv, const Filter* filter) {
-    if (jv->type != JSON_OBJECT) {
+static JsonValue* filter_run_field(JsonValue* val, const Filter* filter) {
+    if (val->type != JSON_OBJECT) {
         fprintf(stderr, "Errore: atteso oggetto JSON per il campo '%s'\n", filter->key);
         return NULL;
     }
-    return json_object_get(jv->value.object, filter->key);
+    return json_object_get(val->value.object, filter->key);
 }
 
-static JsonValue* run_filter_array_index(JsonValue* jv, const Filter* filter) {
-    if (jv->type != JSON_ARRAY) {
+static JsonValue* filter_run_array_index(JsonValue* val, const Filter* filter) {
+    if (val->type != JSON_ARRAY) {
         fprintf(stderr, "Errore: atteso array JSON per l'indice %zu\n", filter->index);
         return NULL;
     }
 
     // Protezione contro accessi fuori dai limiti dell'array
-    if (filter->index >= jv->value.array.count) {
+    if (filter->index >= val->value.array.count) {
         return NULL;
     }
 
-    return jv->value.array.items[filter->index];
+    return val->value.array.items[filter->index];
 }
 
-JsonValue* run_filter(JsonValue* jv, Filter* filter) {
+JsonValue* filter_run(JsonValue* val, Filter* filter) {
     // 1. Condizioni di terminazione/sicurezza
     if (filter == NULL) {
-        return jv;
+        return val;
     }
-    if (jv == NULL) {
+    if (val == NULL) {
         return NULL;
     }
 
@@ -40,15 +40,15 @@ JsonValue* run_filter(JsonValue* jv, Filter* filter) {
     JsonValue* step_result = NULL;
     switch (filter->type) {
         case FILTER_IDENTITY:
-            step_result = jv;
+            step_result = val;
             break;
 
         case FILTER_FIELD:
-            step_result = run_filter_field(jv, filter);
+            step_result = filter_run_field(val, filter);
             break;
 
         case FILTER_ARRAY_INDEX:
-            step_result = run_filter_array_index(jv, filter);
+            step_result = filter_run_array_index(val, filter);
             break;
 
         default:
@@ -62,5 +62,5 @@ JsonValue* run_filter(JsonValue* jv, Filter* filter) {
     }
 
     // 4. Altrimenti procediamo ricorsivamente con il nodo successivo
-    return run_filter(step_result, filter->next);
+    return filter_run(step_result, filter->next);
 }

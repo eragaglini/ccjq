@@ -18,6 +18,6 @@ typedef enum filter_parser_error {
     FILTERPARSER_ERROR_COUNT,
 } filter_parser_error_t;
 
-Filter* compile_filter(const char* filter_str);
+Filter* filter_compile(const char* filter_str);
 
 #endif // FILTER_PARSER_H

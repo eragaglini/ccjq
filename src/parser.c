@@ -7,9 +7,9 @@
 #include "json_object.h"
 #include "json_value.h"
 
-static JsonValue* parse_value(Tokenizer* tknzptr, Token t) {
-    // Token t = next_token(tknzptr);
-    if (t.type == TOKEN_ERROR) return NULL;
+static JsonValue* parse_value(Tokenizer* tokenizer, Token token) {
+    // Token t = next_token(tokenizer);
+    if (token.type == TOKEN_ERROR) return NULL;
 
     JsonValue* res = (JsonValue*)malloc(sizeof(JsonValue));
     if (!res) {
@@ -18,10 +18,10 @@ static JsonValue* parse_value(Tokenizer* tknzptr, Token t) {
     };
     // default null, se non viene parsato in nessun possibile json value
     // lo ritorniamo così e darà errore
-    switch (t.type) {
+    switch (token.type) {
         case TOKEN_LEFT_BRACE:
             res->type = JSON_OBJECT;
-            res->value.object = parse_object(tknzptr);
+            res->value.object = parse_object(tokenizer);
             // se non è stato correttamente instanziato l'oggetto
             // ritorniamo subito NULL
             if (!res->value.object) {
@@ -32,12 +32,12 @@ static JsonValue* parse_value(Tokenizer* tknzptr, Token t) {
 
         case TOKEN_LEFT_BRACKET:
             free(res);
-            res = parse_array(tknzptr);
+            res = parse_array(tokenizer);
             break;
 
         case TOKEN_STRING:
             res->type = JSON_STRING;
-            res->value.string = t.value;
+            res->value.string = token.value;
             break;
 
         case TOKEN_NULL:
@@ -46,13 +46,13 @@ static JsonValue* parse_value(Tokenizer* tknzptr, Token t) {
 
         case TOKEN_NUMBER:
             res->type = JSON_NUMBER;
-            sscanf(t.value, "%lf", &res->value.number);
+            sscanf(token.value, "%lf", &res->value.number);
             break;
 
         case TOKEN_TRUE:
         case TOKEN_FALSE:
             res->type = JSON_BOOL;
-            res->value.boolean = t.type == TOKEN_TRUE ? true : false;
+            res->value.boolean = token.type == TOKEN_TRUE ? true : false;
             break;
 
         // Expecting 'STRING', 'NUMBER', 'NULL', 'TRUE', 'FALSE', '{', '[', got 'undefined'
@@ -67,8 +67,8 @@ static JsonValue* parse_value(Tokenizer* tknzptr, Token t) {
 JsonValue* parse_json(FILE* stream) {
     Tokenizer tokenizer;
     init_tokenizer(&tokenizer, stream);
-    Token t = next_token(&tokenizer);
-    JsonValue* res = parse_value(&tokenizer, t);
+    Token token = next_token(&tokenizer);
+    JsonValue* res = parse_value(&tokenizer, token);
 
     // dopo il parsing il file deve essere finito, altrimenti diamo un errore
     if (next_token(&tokenizer).type != TOKEN_EOF) {
@@ -80,15 +80,15 @@ JsonValue* parse_json(FILE* stream) {
 
 json_parser_error_t parse_and_add_key(Tokenizer* tokenizer, JsonObject* obj, const char* key) {
     // 1. Dobbiamo prima verificare e consumare i due punti ':'
-    Token t = next_token(tokenizer);
-    if (t.type != TOKEN_COLON) {
+    Token token = next_token(tokenizer);
+    if (token.type != TOKEN_COLON) {
         json_object_free(obj);
         return JSONPARSER_ERROR_SYNTAX;  // o altro codice errore
     }
 
     // 2. Ora possiamo parsare il valore
-    t = next_token(tokenizer);
-    JsonValue* value = parse_value(tokenizer, t);
+    token = next_token(tokenizer);
+    JsonValue* value = parse_value(tokenizer, token);
     if (!value) {
         json_object_free(obj);
         return JSONPARSER_ERROR_NOMEM;
@@ -106,33 +106,33 @@ JsonObject* parse_object(Tokenizer* tokenizer) {
     // json_object_create() ha fallito, propaghiamo l'errore
     if (!res) return NULL;
     // accediamo
-    Token t = next_token(tokenizer);
-    if (t.type == TOKEN_RIGHT_BRACE) {
+    Token token = next_token(tokenizer);
+    if (token.type == TOKEN_RIGHT_BRACE) {
         return res;
     }
     // in un oggetto, la chiave deve essere sempre una stringa
-    else if (t.type == TOKEN_STRING) {
-        if (parse_and_add_key(tokenizer, res, t.value) != JSONPARSER_ERROR_OK) {
+    else if (token.type == TOKEN_STRING) {
+        if (parse_and_add_key(tokenizer, res, token.value) != JSONPARSER_ERROR_OK) {
             // l'oggetto è già stato deallocato in parse_and_add_key()
             // posso ritornare null
             return NULL;
         }
-        t = next_token(tokenizer);
-        while (t.type == TOKEN_COMMA) {
-            t = next_token(tokenizer);
-            if (t.type != TOKEN_STRING) {
+        token = next_token(tokenizer);
+        while (token.type == TOKEN_COMMA) {
+            token = next_token(tokenizer);
+            if (token.type != TOKEN_STRING) {
                 fprintf(stderr, "Le chiavi di un JSON possono essere solo stringhe!\n");
                 json_object_free(res);
                 return NULL;
             }
-            if (parse_and_add_key(tokenizer, res, t.value) != JSONPARSER_ERROR_OK) {
+            if (parse_and_add_key(tokenizer, res, token.value) != JSONPARSER_ERROR_OK) {
                 // l'oggetto è già stato deallocato in parse_and_add_key()
                 // posso ritornare null
                 return NULL;
             }
-            t = next_token(tokenizer);
+            token = next_token(tokenizer);
         }
-        if (t.type != TOKEN_RIGHT_BRACE) {
+        if (token.type != TOKEN_RIGHT_BRACE) {
             fprintf(stderr, "Atteso: ':' o '}'\n");
             json_object_free(res);
             return NULL;
@@ -169,17 +169,17 @@ JsonValue* parse_array(Tokenizer* tokenizer) {
     }
 
     // 2. Leggiamo il primo token dopo '['
-    Token t = next_token(tokenizer);
+    Token token = next_token(tokenizer);
 
     // Caso speciale: Array vuoto "[]"
-    if (t.type == TOKEN_RIGHT_BRACKET) {
+    if (token.type == TOKEN_RIGHT_BRACKET) {
         return arr_value;  // Ritorna l'array vuoto valido!
     }
 
     // 3. Ciclo per leggere gli elementi
     while (true) {
         // Parsiamo il valore dell'elemento attuale
-        JsonValue* element = parse_value(tokenizer, t);
+        JsonValue* element = parse_value(tokenizer, token);
 
         if (!element) {
             // ERRORE DI PARSING! Pulisci la memoria accumulata finora e ritorna NULL
@@ -208,18 +208,18 @@ JsonValue* parse_array(Tokenizer* tokenizer) {
         arr_value->value.array.items[arr_value->value.array.count++] = element;
 
         // Verifichiamo la virgola ',' o la chiusura ']'
-        t = next_token(tokenizer);
-        if (t.type == TOKEN_RIGHT_BRACKET) {
+        token = next_token(tokenizer);
+        if (token.type == TOKEN_RIGHT_BRACKET) {
             return arr_value;  // Successo!
-        } else if (t.type != TOKEN_COMMA) {
+        } else if (token.type != TOKEN_COMMA) {
             fprintf(stderr,
                     "Attenzione! Errore di sintassi! Attesa ',', Tipo di token ricevuto: %d!\n",
-                    t.type);
+                    token.type);
             // Manca la virgola -> Errore di sintassi
             json_value_free(arr_value);
             return NULL;
         }
 
-        t = next_token(tokenizer);
+        token = next_token(tokenizer);
     }
 }

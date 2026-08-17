@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "filter_parser.h"
 #include "filter.h"
 #include "filter_engine.h"
+#include "filter_parser.h"
 #include "parser.h"
 #include "print.h"
 #include "tokenizer.h"
@@ -51,14 +51,14 @@ int main(int argc, char* argv[]) {
     }
 
     // 2. Valutazione del filtro
-    Filter* filter = compile_filter(filter_str);
+    Filter* filter = filter_compile(filter_str);
     if (filter == NULL) {
         // Se il filtro è sintatticamente errato
         json_value_free(root);
         return EXIT_FAILURE;
     }
 
-    JsonValue* result = run_filter(root, filter);
+    JsonValue* result = filter_run(root, filter);
 
     // 3. Stampa del risultato
     json_value_dump(result);
@@ -68,7 +68,6 @@ int main(int argc, char* argv[]) {
 
     // 5. Liberazione della struttura filter
     filter_free(filter);
-
 
     // 6. Liberazione del risultato
     json_value_free(result);

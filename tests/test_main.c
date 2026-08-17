@@ -61,9 +61,9 @@ void test_filter_identity() {
     ASSERT(root != NULL, "Root should not be NULL");
 
     // Il filtro "." deve restituire esattamente il nodo root
-    Filter* filter = compile_filter(".");
+    Filter* filter = filter_compile(".");
     ASSERT(filter != NULL, "Identity filter is NULL!");
-    JsonValue* result = run_filter(root, filter);
+    JsonValue* result = filter_run(root, filter);
     ASSERT(result == root, "Identity filter '.' should return the root JsonValue itself");
     json_value_free(root);
     printf("test_filter_identity: PASSED\n");
@@ -75,19 +75,19 @@ void test_filter_simple_key() {
     ASSERT(root != NULL, "Root should not be NULL");
 
     // Test estrazione stringa con .name
-    Filter* name_filter = compile_filter(".\"name\"");
+    Filter* name_filter = filter_compile(".\"name\"");
     // usamo ->next per il check perché il primo filtro è sempre il filtro identità , che in fase
     // di esecuzione sarà eventualmente saltato
     ASSERT(name_filter->next->type == FILTER_FIELD, "Name filter should be field!!\n");
-    JsonValue* name_res = run_filter(root, name_filter);
+    JsonValue* name_res = filter_run(root, name_filter);
     ASSERT(name_res != NULL, "Filter '.name' returned NULL");
     ASSERT(name_res->type == JSON_STRING, "Value of '.name' must be a string");
     ASSERT(strcmp(name_res->value.string, "Luigi") == 0, "Value of '.name' is wrong");
     filter_free(name_filter);
 
     // Test estrazione numero con .coins
-    Filter* coins_filter = compile_filter(".\"coins\"");
-    JsonValue* coins_res = run_filter(root, coins_filter);
+    Filter* coins_filter = filter_compile(".\"coins\"");
+    JsonValue* coins_res = filter_run(root, coins_filter);
 
     ASSERT(coins_res != NULL, "Filter '.coins' returned NULL");
     ASSERT(coins_res->type == JSON_NUMBER, "Value of '.coins' must be a number");
@@ -104,8 +104,8 @@ void test_filter_missing_key() {
     ASSERT(root != NULL, "Root should not be NULL");
 
     // Se la chiave non esiste, il lookup restituisce NULL
-    Filter* missing_key_filter = compile_filter(".missing_key");
-    JsonValue* result = run_filter(root, missing_key_filter);
+    Filter* missing_key_filter = filter_compile(".missing_key");
+    JsonValue* result = filter_run(root, missing_key_filter);
     ASSERT(result == NULL, "Filter on missing key should return NULL");
 
     json_value_free(root);
@@ -119,14 +119,14 @@ void test_filter_invalid_syntax() {
 
     // Filtri che non iniziano con '.' o sintassi malformate
 
-    Filter* empty_filter = compile_filter("");
+    Filter* empty_filter = filter_compile("");
     ASSERT(empty_filter == NULL, "Empty filter should fail");
     filter_free(empty_filter);
-    Filter* no_dot_filter = compile_filter("name");
+    Filter* no_dot_filter = filter_compile("name");
     ASSERT(no_dot_filter == NULL, "Filter without leading dot should fail");
     filter_free(no_dot_filter);
 
-    Filter* malformed_filter = compile_filter("..");
+    Filter* malformed_filter = filter_compile("..");
     ASSERT(malformed_filter == NULL, "Malformed filter '..' should fail");
     filter_free(malformed_filter);
 
