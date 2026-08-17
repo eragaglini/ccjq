@@ -10,7 +10,7 @@
 #include "tokenizer.h"
 
 int main(int argc, char* argv[]) {
-    const char* filter_str = ".";  // Default per argc == 1
+    const char* filter_str = ".";  // Default se non viene passato alcun filtro
     FILE* input_stream = stdin;
 
     if (argc == 2) {
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     }
     ungetc(c, input_stream);
 
-    // 1. Parsing del JSON
+    // 1. Parsing del JSON in ingresso
     JsonValue* root = parse_json(input_stream);
 
     if (input_stream != stdin) {
@@ -46,31 +46,31 @@ int main(int argc, char* argv[]) {
     }
 
     if (root == NULL) {
-        fprintf(stderr, "JSON non valido!\n");
+        fprintf(stderr, "Errore: JSON non valido!\n");
         return EXIT_FAILURE;
     }
 
-    // 2. Valutazione del filtro
+    // 2. Compilazione della pipeline di filtri
     Filter* filter = filter_compile(filter_str);
     if (filter == NULL) {
-        // Se il filtro è sintatticamente errato
         json_value_free(root);
         return EXIT_FAILURE;
     }
 
+    // 3. Esecuzione del filtro
     JsonValue* result = filter_run(root, filter);
 
-    // 3. Stampa del risultato
-    json_value_dump(result);
+    // 4. Stampa del risultato
+    if (result != NULL) {
+        json_value_dump(result);
+        printf("\n");
+    } else {
+        printf("null\n");
+    }
 
-    // 4. Liberazione dell'albero originale
+    // 5. Deallocazione della pipeline e dell'albero JSON
     json_value_free(root);
-
-    // 5. Liberazione della struttura filter
     filter_free(filter);
-
-    // 6. Liberazione del risultato
-    json_value_free(result);
 
     return EXIT_SUCCESS;
 }
