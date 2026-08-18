@@ -10,7 +10,7 @@
 static filter_parser_error_t filter_compile_next(Filter* filter, FilterTokenizer* tokenizer,
                                                 FilterToken* token);
 static filter_parser_error_t filter_dot_compile(Filter* filter, FilterTokenizer* tokenizer);
-static filter_parser_error_t filter_array_index_compile(Filter* filter, FilterTokenizer* tokenizer);
+static filter_parser_error_t filter_bracket_compile(Filter* filter, FilterTokenizer* tokenizer);
 
 /**
  * Compila il passo/transizione successivo della pipeline in base al token ricevuto.
@@ -22,7 +22,7 @@ static filter_parser_error_t filter_compile_next(Filter* filter, FilterTokenizer
             return filter_dot_compile(filter, tokenizer);
 
         case FILTER_TOKEN_LEFT_BRACKET:
-            return filter_array_index_compile(filter, tokenizer);
+            return filter_bracket_compile(filter, tokenizer);
 
         case FILTER_TOKEN_PIPE: {
             FilterToken next_tok = next_filter_token(tokenizer);
@@ -48,7 +48,7 @@ static filter_parser_error_t filter_compile_next(Filter* filter, FilterTokenizer
 /**
  * Gestisce l'accesso a un indice di array o a una chiave delimitata da quadre: [0], ["chiave"]
  */
-static filter_parser_error_t filter_array_index_compile(Filter* filter,
+static filter_parser_error_t filter_bracket_compile(Filter* filter,
                                                         FilterTokenizer* tokenizer) {
     FilterToken token = next_filter_token(tokenizer);
     Filter* next_step = (Filter*)calloc(1, sizeof(Filter));
@@ -120,7 +120,7 @@ static filter_parser_error_t filter_dot_compile(Filter* filter, FilterTokenizer*
 
         case FILTER_TOKEN_LEFT_BRACKET:
             // Passiamo 'filter' genitore affinché la parentesi si agganci correttamente
-            return filter_array_index_compile(filter, tokenizer);
+            return filter_bracket_compile(filter, tokenizer);
 
         case FILTER_TOKEN_EOF:
             fprintf(stderr, "Errore di sintassi: necessario specificare chiave o indice dopo il punto\n");
