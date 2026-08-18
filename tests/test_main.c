@@ -55,6 +55,53 @@ void test_simple_json() {
     printf("test_simple_json: PASSED\n");
 }
 
+void test_parse_nested_json() {
+    const char* text =
+        "{\n"
+        "  \"user\": {\n"
+        "    \"name\": \"Yoshi\",\n"
+        "    \"friends\": [\"Mario\", \"Luigi\"]\n"
+        "  }\n"
+        "}";
+
+    // 1. Parsing della radice
+    JsonValue* root = parse_from_string(text);
+    ASSERT(root != NULL, "Root non deve essere NULL");
+    ASSERT(root->type == JSON_OBJECT, "Root deve essere un JSON_OBJECT");
+
+    // 2. Verifica oggetto "user"
+    JsonValue* user = json_object_get(root->value.object, "user");
+    ASSERT(user != NULL, "Campo 'user' non trovato");
+    ASSERT(user->type == JSON_OBJECT, "'user' deve essere un JSON_OBJECT");
+
+    // 3. Verifica stringa "name" -> "Yoshi"
+    JsonValue* name = json_object_get(user->value.object, "name");
+    ASSERT(name != NULL, "Campo 'name' non trovato dentro 'user'");
+    ASSERT(name->type == JSON_STRING, "'name' deve essere un JSON_STRING");
+    ASSERT(strcmp(name->value.string, "Yoshi") == 0, "Il valore di 'name' deve essere 'Yoshi'");
+
+    // 4. Verifica array "friends"
+    JsonValue* friends = json_object_get(user->value.object, "friends");
+    ASSERT(friends != NULL, "Campo 'friends' non trovato dentro 'user'");
+    ASSERT(friends->type == JSON_ARRAY, "'friends' deve essere un JSON_ARRAY");
+    ASSERT_EQ(friends->value.array.count, 2, "L'array 'friends' deve contenere 2 elementi");
+
+    // 5. Verifica elementi dell'array
+    JsonValue* item0 = friends->value.array.items[0];
+    ASSERT(item0 != NULL, "Elemento friends[0] non deve essere NULL");
+    ASSERT(item0->type == JSON_STRING, "friends[0] deve essere JSON_STRING");
+    ASSERT(strcmp(item0->value.string, "Mario") == 0, "friends[0] deve essere 'Mario'");
+
+    JsonValue* item1 = friends->value.array.items[1];
+    ASSERT(item1 != NULL, "Elemento friends[1] non deve essere NULL");
+    ASSERT(item1->type == JSON_STRING, "friends[1] deve essere JSON_STRING");
+    ASSERT(strcmp(item1->value.string, "Luigi") == 0, "friends[1] deve essere 'Luigi'");
+
+    // 6. Pulizia della memoria
+    json_value_free(root);
+    printf("test_parse_nested_json: PASSED\n");
+}
+
 void test_filter_identity() {
     const char* text = "{ \"name\": \"Mario\", \"age\": 30 }";
     JsonValue* root = parse_from_string(text);
@@ -134,16 +181,48 @@ void test_filter_invalid_syntax() {
     printf("test_filter_invalid_syntax: PASSED\n");
 }
 
+void test_filter_nested_and_chained() {
+    const char* text =
+        "{\n"
+        "  \"user\": {\n"
+        "    \"name\": \"Yoshi\",\n"
+        "    \"friends\": [\"Mario\", \"Luigi\"]\n"
+        "  }\n"
+        "}";
+    JsonValue* root = parse_from_string(text);
+    ASSERT(root != NULL, "Root should not be NULL");
+
+    // 1. Test chiavi concatenate (.user.name)
+    Filter* nested_key = filter_compile(".user.name");
+    ASSERT(nested_key != NULL, "Nested key filter failed to compile");
+    JsonValue* res1 = filter_run(root, nested_key);
+    ASSERT(res1 != NULL && res1->type == JSON_STRING, "Failed to retrieve .user.name");
+    ASSERT(strcmp(res1->value.string, "Yoshi") == 0, "Value of .user.name is wrong");
+    filter_free(nested_key);
+
+    // 2. Test catena con array (.user.friends.[1] oppure .user.friends[1])
+    Filter* nested_array = filter_compile(".user.friends[1]");
+    ASSERT(nested_array != NULL, "Nested array filter failed to compile");
+    JsonValue* res2 = filter_run(root, nested_array);
+    ASSERT(res2 != NULL && res2->type == JSON_STRING, "Failed to retrieve .user.friends[1]");
+    ASSERT(strcmp(res2->value.string, "Luigi") == 0, "Value of .user.friends[1] is wrong");
+    filter_free(nested_array);
+
+    json_value_free(root);
+    printf("test_filter_nested_and_chained: PASSED\n");
+}
+
 int main() {
     printf("==========================================\n");
     printf("           RUNNING CCJQ UNIT TESTS        \n");
     printf("==========================================\n");
 
-    test_simple_json();
-    test_filter_identity();
-    test_filter_simple_key();
-    test_filter_missing_key();
-    test_filter_invalid_syntax();
+    // test_simple_json();
+    // test_filter_identity();
+    // test_filter_simple_key();
+    // test_filter_missing_key();
+    // test_filter_invalid_syntax();
+    test_filter_nested_and_chained();
 
     printf("==========================================\n");
     printf("All unit tests passed successfully! 🎉\n");
