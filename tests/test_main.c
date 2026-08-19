@@ -263,6 +263,44 @@ void test_filter_optional_operator() {
     printf("test_filter_optional_operator: PASSED\n");
 }
 
+void test_filter_pipe_operator_edge_cases(void) {
+    const char* text =
+        "{\n"
+        "  \"data\": {\n"
+        "    \"items\": [{\"id\": 42, \"title\": \"Clean Code\"}]\n"
+        "  }\n"
+        "}";
+    JsonValue* root = parse_from_string(text);
+    ASSERT(root != NULL, "Root should not be NULL");
+
+    // 1. Pipe multipli concatenati: .data | .items | .[0] | .title
+    Filter* f_multi = filter_compile(".data | .items | .[0] | .title");
+    ASSERT(f_multi != NULL, "Multi-pipe filter failed to compile");
+    JsonValue* res_multi = filter_run(root, f_multi);
+    ASSERT(res_multi != NULL && res_multi->type == JSON_STRING, "Multi-pipe result should be string");
+    ASSERT(strcmp(res_multi->value.string, "Clean Code") == 0, "Multi-pipe extracted wrong value");
+    filter_free(f_multi);
+
+    // 2. Pipe con spaziature variabili
+    Filter* f_spaces = filter_compile(".data    |    .items[0]   |   .id");
+    ASSERT(f_spaces != NULL, "Spaced pipe filter failed to compile");
+    JsonValue* res_spaces = filter_run(root, f_spaces);
+    ASSERT(res_spaces != NULL && res_spaces->type == JSON_NUMBER, "Result should be number");
+    ASSERT_EQ((long long)res_spaces->value.number, 42, "Value of id is wrong");
+    filter_free(f_spaces);
+
+    // 3. Sintassi non valida: Pipe sospeso a fine filtro
+    Filter* f_trailing = filter_compile(".data |");
+    ASSERT(f_trailing == NULL, "Trailing pipe should fail compilation");
+
+    // 4. Sintassi non valida: Doppio pipe
+    Filter* f_double = filter_compile(".data || .items");
+    ASSERT(f_double == NULL, "Double pipe '||' should fail compilation");
+
+    json_value_free(root);
+    printf("test_filter_pipe_operator_edge_cases: PASSED\n");
+}
+
 int main() {
     printf("==========================================\n");
     printf("           RUNNING CCJQ UNIT TESTS        \n");
@@ -277,6 +315,7 @@ int main() {
     test_filter_complex_array_objects();
     test_filter_invalid_syntax();
     test_filter_optional_operator();
+    test_filter_pipe_operator_edge_cases();
 
     printf("==========================================\n");
     printf("All unit tests passed successfully! 🎉\n");
