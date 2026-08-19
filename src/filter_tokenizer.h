@@ -10,6 +10,7 @@ typedef enum {
     FILTER_TOKEN_STRING,         // stringa con apici (es. "key-with-dash")
     FILTER_TOKEN_NUMBER,         // indice numerico (es. 0, 12)
     FILTER_TOKEN_PIPE,           // |
+    FILTER_TOKEN_OPTIONAL, // '?'
     FILTER_TOKEN_EOF,            // fine filtro
     FILTER_TOKEN_ERROR           // errore di sintassi
 } FilterTokenType;

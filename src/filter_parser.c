@@ -8,7 +8,7 @@
 
 // Forward declarations delle funzioni statiche interne
 static filter_parser_error_t filter_compile_next(Filter* filter, FilterTokenizer* tokenizer,
-                                                FilterToken* token);
+                                                 FilterToken* token);
 static filter_parser_error_t filter_dot_compile(Filter* filter, FilterTokenizer* tokenizer);
 static filter_parser_error_t filter_bracket_compile(Filter* filter, FilterTokenizer* tokenizer);
 
@@ -48,8 +48,7 @@ static filter_parser_error_t filter_compile_next(Filter* filter, FilterTokenizer
 /**
  * Gestisce l'accesso a un indice di array o a una chiave delimitata da quadre: [0], ["chiave"]
  */
-static filter_parser_error_t filter_bracket_compile(Filter* filter,
-                                                        FilterTokenizer* tokenizer) {
+static filter_parser_error_t filter_bracket_compile(Filter* filter, FilterTokenizer* tokenizer) {
     FilterToken token = next_filter_token(tokenizer);
     Filter* next_step = (Filter*)calloc(1, sizeof(Filter));
     if (!next_step) {
@@ -90,6 +89,12 @@ static filter_parser_error_t filter_bracket_compile(Filter* filter,
     }
 
     token = next_filter_token(tokenizer);
+
+    if (token.type == FILTER_TOKEN_OPTIONAL) {
+        next_step->suppress_error = true;
+        token = next_filter_token(tokenizer);
+    }
+
     filter_parser_error_t err = filter_compile_next(next_step, tokenizer, &token);
     if (token.value != NULL) {
         free(token.value);
@@ -123,7 +128,8 @@ static filter_parser_error_t filter_dot_compile(Filter* filter, FilterTokenizer*
             return filter_bracket_compile(filter, tokenizer);
 
         case FILTER_TOKEN_EOF:
-            fprintf(stderr, "Errore di sintassi: necessario specificare chiave o indice dopo il punto\n");
+            fprintf(stderr,
+                    "Errore di sintassi: necessario specificare chiave o indice dopo il punto\n");
             return FILTER_PARSER_ERROR_SYNTAX;
 
         default:
@@ -135,6 +141,12 @@ static filter_parser_error_t filter_dot_compile(Filter* filter, FilterTokenizer*
     }
 
     token = next_filter_token(tokenizer);
+
+    if (token.type == FILTER_TOKEN_OPTIONAL) {
+        next_step->suppress_error = true;
+        token = next_filter_token(tokenizer);
+    }
+
     filter_parser_error_t err = filter_compile_next(next_step, tokenizer, &token);
     if (token.value != NULL) {
         free(token.value);

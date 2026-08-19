@@ -18,7 +18,7 @@ static const unsigned char type[UCHAR_MAX + 1u] = {
     ['w'] = 1, ['x'] = 1, ['y'] = 1, ['z'] = 1,
     ['_'] = 1,  // Supporto per identificatori snake_case
     ['"'] = 1, ['['] = 2, [']'] = 3, ['.'] = 4, ['|'] = 5, ['0'] = 6, ['1'] = 6, ['2'] = 6,
-    ['3'] = 6, ['4'] = 6, ['5'] = 6, ['6'] = 6, ['7'] = 6, ['8'] = 6, ['9'] = 6, ['\0'] = 7};
+    ['3'] = 6, ['4'] = 6, ['5'] = 6, ['6'] = 6, ['7'] = 6, ['8'] = 6, ['9'] = 6, ['?'] = 7, ['\0'] = 8,};
 
 static void advance_filter_tokenizer(FilterTokenizer* tokenizer) { tokenizer->cursor++; }
 
@@ -197,6 +197,11 @@ FilterToken next_filter_token(FilterTokenizer* tokenizer) {
             return read_index(tokenizer);
 
         case 7:
+            token.type = FILTER_TOKEN_OPTIONAL;
+            advance_filter_tokenizer(tokenizer);
+            return token;
+
+        case 8:
             token.type = FILTER_TOKEN_EOF;
             return token;
 

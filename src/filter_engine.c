@@ -7,7 +7,9 @@
 
 static JsonValue* filter_run_field(JsonValue* val, const Filter* filter) {
     if (val->type != JSON_OBJECT) {
-        fprintf(stderr, "Errore: atteso oggetto JSON per il campo '%s'\n", filter->key);
+        if (!filter->suppress_error) {
+            fprintf(stderr, "Errore: atteso oggetto JSON per il campo '%s'\n", filter->key);
+        }
         return NULL;
     }
     return json_object_get(val->value.object, filter->key);
@@ -15,7 +17,9 @@ static JsonValue* filter_run_field(JsonValue* val, const Filter* filter) {
 
 static JsonValue* filter_run_array_index(JsonValue* val, const Filter* filter) {
     if (val->type != JSON_ARRAY) {
-        fprintf(stderr, "Errore: atteso array JSON per l'indice %zu\n", filter->index);
+        if (!filter->suppress_error) {
+            fprintf(stderr, "Errore: atteso array JSON per l'indice %zu\n", filter->index);
+        }
         return NULL;
     }
 

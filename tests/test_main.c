@@ -235,6 +235,34 @@ void test_filter_invalid_syntax() {
     printf("test_filter_invalid_syntax: PASSED\n");
 }
 
+void test_filter_optional_operator() {
+    // 1. Test su tipo scalare (numero) con campo opzionale (.name?)
+    const char* number_json = "123";
+    JsonValue* root_num = parse_from_string(number_json);
+    ASSERT(root_num != NULL, "Root should not be NULL");
+
+    Filter* opt_field_filter = filter_compile(".name?");
+    ASSERT(opt_field_filter != NULL, "Filter '.name?' failed to compile");
+    JsonValue* res1 = filter_run(root_num, opt_field_filter);
+    ASSERT(res1 == NULL, "Accessing field on number with '?' should return NULL without error");
+    filter_free(opt_field_filter);
+    json_value_free(root_num);
+
+    // 2. Test su oggetto con indice di array opzionale (.[0]?)
+    const char* obj_json = "{ \"user\": \"Mario\" }";
+    JsonValue* root_obj = parse_from_string(obj_json);
+    ASSERT(root_obj != NULL, "Root should not be NULL");
+
+    Filter* opt_index_filter = filter_compile(".[0]?");
+    ASSERT(opt_index_filter != NULL, "Filter '.[0]?' failed to compile");
+    JsonValue* res2 = filter_run(root_obj, opt_index_filter);
+    ASSERT(res2 == NULL, "Accessing index on object with '?' should return NULL without error");
+    filter_free(opt_index_filter);
+    json_value_free(root_obj);
+
+    printf("test_filter_optional_operator: PASSED\n");
+}
+
 int main() {
     printf("==========================================\n");
     printf("           RUNNING CCJQ UNIT TESTS        \n");
@@ -248,6 +276,7 @@ int main() {
     test_filter_nested_and_chained();
     test_filter_complex_array_objects();
     test_filter_invalid_syntax();
+    test_filter_optional_operator();
 
     printf("==========================================\n");
     printf("All unit tests passed successfully! 🎉\n");
