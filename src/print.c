@@ -12,6 +12,31 @@ static void print_indent(FILE* stream, int level) {
     }
 }
 
+void json_print_string(const char* str) {
+    putchar('"');
+    for (size_t i = 0; str[i] != '\0'; i++) {
+        unsigned char c = (unsigned char)str[i];
+        switch (c) {
+            case '"':  fputs("\\\"", stdout); break;
+            case '\\': fputs("\\\\", stdout); break;
+            case '\b': fputs("\\b", stdout);  break;
+            case '\f': fputs("\\f", stdout);  break;
+            case '\n': fputs("\\n", stdout);  break;
+            case '\r': fputs("\\r", stdout);  break;
+            case '\t': fputs("\\t", stdout);  break;
+            default:
+                if (c < 0x20) {
+                    // Caratteri di controllo generici non stampabili in formato unicode escape
+                    printf("\\u%04x", c);
+                } else {
+                    putchar(c);
+                }
+                break;
+        }
+    }
+    putchar('"');
+}
+
 void json_value_print(FILE* stream, const JsonValue* val, int indent_level) {
     if (!val) {
         fprintf(stream, "null");
@@ -33,7 +58,7 @@ void json_value_print(FILE* stream, const JsonValue* val, int indent_level) {
             break;
 
         case JSON_STRING:
-            fprintf(stream, "\"%s\"", val->value.string);
+            json_print_string(val->value.string);
             break;
 
         case JSON_ARRAY: {
