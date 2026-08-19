@@ -5,8 +5,15 @@
 #include "json_object.h"
 #include "json_value.h"
 
+// Istanza con visibilità limitata a questa Translation Unit (static)
+static JsonValue JSON_NULL_INSTANCE = { .type = JSON_NULL };
+
+JsonValue* json_null_value(void) {
+    return &JSON_NULL_INSTANCE;
+}
+
 void json_value_free(JsonValue* val) {
-    if (!val) return;
+    if (!val || (val == &JSON_NULL_INSTANCE)) return;
 
     switch (val->type) {
         case JSON_STRING:

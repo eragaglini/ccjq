@@ -142,7 +142,7 @@ void test_filter_missing_key() {
     Filter* missing_key_filter = filter_compile(".missing_key");
     ASSERT(missing_key_filter != NULL, "Filter compilation failed");
     JsonValue* result = filter_run(root, missing_key_filter);
-    ASSERT(result == NULL, "Filter on missing key should return NULL");
+    ASSERT(result->type == JSON_NULL, "Filter on missing key should return NULL");
     filter_free(missing_key_filter);
 
     json_value_free(root);

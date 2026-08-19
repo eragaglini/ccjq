@@ -64,8 +64,6 @@ int main(int argc, char* argv[]) {
     if (result != NULL) {
         json_value_dump(result);
         printf("\n");
-    } else {
-        printf("null\n");
     }
 
     // 5. Deallocazione della pipeline e dell'albero JSON

@@ -46,4 +46,7 @@ struct JsonValue {
     } value;
 };
 
+JsonValue* json_null_value(void);
+void json_value_free(JsonValue *val);
+
 void json_value_free(JsonValue *val);

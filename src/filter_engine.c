@@ -12,7 +12,12 @@ static JsonValue* filter_run_field(JsonValue* val, const Filter* filter) {
         }
         return NULL;
     }
-    return json_object_get(val->value.object, filter->key);
+    JsonValue* res = json_object_get(val->value.object, filter->key);
+    if (!res)
+    {
+        return json_null_value();
+    }
+    return res;
 }
 
 static JsonValue* filter_run_array_index(JsonValue* val, const Filter* filter) {
@@ -25,10 +30,16 @@ static JsonValue* filter_run_array_index(JsonValue* val, const Filter* filter) {
 
     // Protezione contro accessi fuori dai limiti dell'array
     if (filter->index >= val->value.array.count) {
+        fprintf(stderr, "Errore: indice %d fuori dai limiti dell'array!\n", (int)filter->index);
         return NULL;
     }
 
-    return val->value.array.items[filter->index];
+    JsonValue* res = val->value.array.items[filter->index];
+    if (!res)
+    {
+        return json_null_value();
+    }
+    return res;
 }
 
 JsonValue* filter_run(JsonValue* val, Filter* filter) {
