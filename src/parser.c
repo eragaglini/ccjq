@@ -72,7 +72,7 @@ JsonValue* parse_json(FILE* stream) {
 
     // dopo il parsing il file deve essere finito, altrimenti diamo un errore
     if (next_token(&tokenizer).type != TOKEN_EOF) {
-        json_value_free(res);
+        // json_value_free(res);
         return NULL;
     }
     return res;
